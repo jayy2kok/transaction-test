@@ -1,72 +1,54 @@
 package com.example.jayraj.transactiontest.config;
 
-import org.apache.kafka.clients.consumer.ConsumerConfig;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.IsolationLevel;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.kafka.annotation.EnableKafka;
-import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.*;
+import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate;
+import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
+import reactor.kafka.receiver.ReceiverOptions;
+import reactor.kafka.sender.KafkaSender;
+import reactor.kafka.sender.SenderOptions;
 
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
-@EnableKafka
+@Slf4j
 @Configuration
 public class KafkaConfig {
 
     @Bean
-    public ConsumerFactory<String, String> consumerFactory() {
+    public ReactiveKafkaProducerTemplate<String, String> reactiveKafkaProducerTemplate(
+            KafkaProperties properties) {
+        Map<String, Object> props = properties.buildProducerProperties();
+        return new ReactiveKafkaProducerTemplate<String, String>(SenderOptions.create(props));
+    }
+
+    @Bean
+    public ReactiveKafkaConsumerTemplate<String, String> reactiveKafkaConsumerTemplate(ReceiverOptions<String, String> kafkaReceiverOptions) {
+        return new ReactiveKafkaConsumerTemplate<String, String>(kafkaReceiverOptions);
+    }
+
+    @Bean
+    public ReceiverOptions<String, String> kafkaReceiverOptions(KafkaProperties kafkaProperties) {
+        ReceiverOptions<String, String> basicReceiverOptions = ReceiverOptions.create(kafkaProperties.buildConsumerProperties());
+        return basicReceiverOptions.subscription(Collections.singletonList("mytopic"));
+    }
+
+    @Bean
+    public KafkaSender<String, String> kadkaSender(){
         Map<String, Object> props = new HashMap<>();
-        props.put(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                "localhost:9092");
-        props.put(
-                ConsumerConfig.GROUP_ID_CONFIG,
-                "foo");
-        props.put(
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-                StringDeserializer.class);
-        props.put(
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-                StringDeserializer.class);
-        props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, IsolationLevel.READ_COMMITTED.toString().toLowerCase(Locale.ROOT));
-        return new DefaultKafkaConsumerFactory<>(props);
-    }
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(ProducerConfig.CLIENT_ID_CONFIG, "sample-producer");
+        props.put(ProducerConfig.ACKS_CONFIG, "all");
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "tx");
+        SenderOptions<String, String> senderOptions = SenderOptions.create(props);
 
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, String>
-    kafkaListenerContainerFactory() {
-
-        ConcurrentKafkaListenerContainerFactory<String, String> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactory());
-        return factory;
-    }
-
-    @Bean
-    public ProducerFactory<String, String> producerFactory() {
-        Map<String, Object> configProps = new HashMap<>();
-        configProps.put(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                "localhost:9092");
-        configProps.put(
-                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-                StringSerializer.class);
-        configProps.put(
-                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-                StringSerializer.class);
-        configProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG,"tx");
-
-        return new DefaultKafkaProducerFactory<>(configProps);
-    }
-
-    @Bean
-    public KafkaTemplate<String, String> kafkaTemplate() {
-        return new KafkaTemplate<>(producerFactory());
+        return KafkaSender.create(senderOptions);
     }
 }

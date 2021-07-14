@@ -3,14 +3,15 @@ package com.example.jayraj.transactiontest.config;
 import lombok.NonNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.mongodb.MongoDatabaseFactory;
-import org.springframework.data.mongodb.MongoTransactionManager;
-import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
+import org.springframework.data.mongodb.ReactiveMongoTransactionManager;
+import org.springframework.data.mongodb.config.AbstractReactiveMongoConfiguration;
+import org.springframework.data.mongodb.repository.config.EnableReactiveMongoRepositories;
+import org.springframework.transaction.ReactiveTransactionManager;
 
 @Configuration
-@EnableMongoRepositories(basePackages = "com.example.jayraj.transactiontest.repository")
-public class MongoConfig extends AbstractMongoClientConfiguration {
+@EnableReactiveMongoRepositories(basePackages = "com.example.jayraj.transactiontest.repository")
+public class MongoConfig extends AbstractReactiveMongoConfiguration{
 
     // rest of the config goes here
 
@@ -26,7 +27,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
     }
 
     @Bean
-    MongoTransactionManager transactionManager(MongoDatabaseFactory dbFactory) {
-        return new MongoTransactionManager(dbFactory);
+    ReactiveMongoTransactionManager transactionManager(ReactiveMongoDatabaseFactory cf) {
+        return new ReactiveMongoTransactionManager(cf);
     }
 }
